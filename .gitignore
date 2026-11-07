@@ -1,0 +1,32 @@
+# Generated output (contains private keys inlined after rendering).
+out/
+out.keep/
+local/
+
+# Persistent key store — plaintext private keys and PSKs.
+state/
+
+# Your real topology, with production endpoints and hostnames.
+# Keep topology.yml.example as the public reference.
+topology.yml
+
+# Python cruft
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# macOS
+.DS_Store
+
+# Editors
+*.swp
+.idea/
+.vscode/

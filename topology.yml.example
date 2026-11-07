@@ -1,0 +1,64 @@
+---
+# Example topology for gen_wireguard.py.
+# Copy to topology.yml and adapt. The real topology.yml is gitignored.
+# Secrets are NEVER in this file — keys and PSKs are generated and stored
+# under state/ (also gitignored), then materialised into the inventory root.
+
+hosts:
+  node-a:
+    endpoint: 10.200.0.10          # public IPv4 or hostname
+    wan_iface: eth0                  # interface used for exit-hub masquerade
+    emit_wg_conf: true               # write wg-quick .conf files for this host
+    emit_inventory: true             # write ansible host_vars
+    emit_netplan: true               # write netplan drop-in
+  node-b:
+    endpoint: vpn.example.org
+    # Optional per-network public endpoint overrides. Useful when a host sits
+    # behind another firewall and needs a DNAT port that differs from the
+    # network's listen port.
+    # endpoints:
+    #   core: vpn.example.org:40010
+    # Networks this host reaches WITHOUT a tunnel (its own LAN, plus whatever
+    # its LAN gateway routes). Set it when a host sits inside a LAN that another
+    # mesh member advertises via member_routes: those routes stay in AllowedIPs
+    # but are not installed, so the host answers that LAN directly instead of
+    # through the tunnel. See README "Hosts inside a routed LAN".
+    # local_networks: [ "10.10.0.0/16" ]
+    wan_iface: ens3
+    emit_wg_conf: true
+    emit_inventory: true
+    emit_netplan: true
+
+clients:
+  client-1:
+    octet: 50                        # same 4th octet used in every client network
+
+networks:
+  # Always-on server mesh.
+  core:
+    type: mesh
+    port: 40001
+    subnet: 10.100.0.0/28            # /28 -> 14 usable, one address per member
+    members: [ node-a, node-b ]
+    member_routes:
+      node-a: [ "10.10.0.0/16" ]  # LAN reachable via node-a
+
+  # Laptop -> LAN tunnel, selective route.
+  home:
+    type: hub
+    port: 40002
+    subnet: 10.100.1.0/24
+    hub: node-a
+    extra_routes: [ "10.10.0.0/16" ]
+    clients: [ client-1 ]
+
+  # Exit via node-b with default-route hijack.
+  exit-egress-node:
+    iface: wg-exit-b                 # Linux interface names are capped at 15 chars
+    type: hub
+    port: 40003
+    subnet: 10.100.2.0/24
+    hub: node-b
+    default_route: true
+    dns: [ "1.1.1.1" ]
+    clients: [ client-1 ]
